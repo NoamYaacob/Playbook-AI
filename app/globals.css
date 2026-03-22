@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  /* Light mode (fallback) */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #6366f1;
+  --primary-foreground: #f8fafc;
+  --secondary: #e2e8f0;
+  --secondary-foreground: #1e293b;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #1e293b;
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #6366f1;
+  --radius: 0.5rem;
+}
+
+.dark {
+  /* Dark premium trading theme */
+  /* slate-900 background: #0f172a */
+  --background: #0f172a;
+  /* slate-50 foreground: #f8fafc */
+  --foreground: #f8fafc;
+  /* slate-800 card: #1e293b */
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  /* slate-800 popover */
+  --popover: #1e293b;
+  --popover-foreground: #f8fafc;
+  /* indigo-500: #6366f1 */
+  --primary: #6366f1;
+  --primary-foreground: #f8fafc;
+  /* slate-700 secondary: #334155 */
+  --secondary: #334155;
+  --secondary-foreground: #f8fafc;
+  /* slate-800/850 muted */
+  --muted: #1e293b;
+  /* slate-400 muted-foreground */
+  --muted-foreground: #94a3b8;
+  /* slate-700 accent */
+  --accent: #334155;
+  --accent-foreground: #f8fafc;
+  /* red-500 destructive: #ef4444 */
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+  /* slate-700 border */
+  --border: #334155;
+  /* slate-700 input */
+  --input: #334155;
+  /* indigo-500 ring */
+  --ring: #6366f1;
+  --radius: 0.5rem;
+}
+
+/* Force dark mode by default */
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling for dark theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #334155;
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #475569;
+}
+
+/* Shimmer animation for skeleton loading */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Trading-specific color utilities */
+.text-profit {
+  color: #22c55e;
+}
+
+.text-loss {
+  color: #ef4444;
+}
+
+.bg-profit {
+  background-color: #22c55e;
+}
+
+.bg-loss {
+  background-color: #ef4444;
+}

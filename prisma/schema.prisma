@@ -1,0 +1,556 @@
+// Playbook AI – Prisma Schema
+// v2 – includes screenshot labels, extended trade questionnaire,
+//      setup clusters, post-import review, and provider stubs.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum Market {
+  FUTURES
+  FOREX
+  STOCKS
+  CRYPTO
+  OPTIONS
+}
+
+enum AccountType {
+  PERSONAL
+  PROP_FIRM
+}
+
+enum TradeSide {
+  LONG
+  SHORT
+}
+
+enum AdherenceStatus {
+  YES
+  NO
+  PARTIAL
+  UNREVIEWED
+}
+
+enum EmotionTag {
+  CONFIDENT
+  ANXIOUS
+  NEUTRAL
+  FOMO
+  REVENGE
+  GREEDY
+  FEARFUL
+  DISCIPLINED
+  IMPULSIVE
+  PATIENT
+}
+
+enum ImportMethod {
+  CSV
+  MANUAL
+  SCREENSHOT
+  BROKER_INTEGRATION
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum GoalType {
+  IMPROVE_DISCIPLINE
+  FIND_BEST_SETUPS
+  REDUCE_REVENGE_TRADING
+  REDUCE_OVERTRADING
+  IMPROVE_PLAYBOOK_ADHERENCE
+  IMPROVE_WIN_RATE
+  IMPROVE_RISK_MANAGEMENT
+}
+
+enum InsightType {
+  ADHERENCE_SUMMARY
+  BEHAVIOR_PATTERN
+  SETUP_PERFORMANCE
+  RISK_VIOLATION
+  COACHING_INSIGHT
+  DAILY_SUMMARY
+}
+
+/// Contextual label for a trade screenshot
+enum ScreenshotType {
+  BEFORE_ENTRY
+  AFTER_EXIT
+  MARKED_UP_CHART
+  BROKER_SCREENSHOT
+  HIGHER_TIMEFRAME
+  OTHER
+}
+
+/// Review status for a post-import review session
+enum PostImportReviewStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+// ---------------------------------------------------------------------------
+// USER
+// ---------------------------------------------------------------------------
+
+model User {
+  id             String      @id @default(cuid())
+  email          String      @unique
+  name           String?
+  passwordHash   String?
+  avatarUrl      String?
+  timezone       String      @default("UTC")
+  language       String      @default("en")
+  primaryMarkets Market[]
+  accountType    AccountType @default(PERSONAL)
+  goals          GoalType[]
+  onboardingDone Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  strategies        Strategy[]
+  trades            Trade[]
+  importBatches     ImportBatch[]
+  dailyReviews      DailyReview[]
+  insightSnapshots  InsightSnapshot[]
+  tags              Tag[]
+  setupClusters      SetupCluster[]
+  postImportReviews  PostImportReview[]
+  brokerConnections  BrokerConnection[]
+
+  @@index([email])
+}
+
+// ---------------------------------------------------------------------------
+// AUTH (NextAuth v5 / Auth.js)
+// ---------------------------------------------------------------------------
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// STRATEGY / PLAYBOOK
+// ---------------------------------------------------------------------------
+
+model Strategy {
+  id          String  @id @default(cuid())
+  userId      String
+  title       String
+  description String? @db.Text
+  isActive    Boolean @default(true)
+  isArchived  Boolean @default(false)
+
+  markets          Market[]
+  preferredSymbols String[]
+  timeframes       String[]
+  tradingSessions  String[]
+
+  allowedHoursStart String?
+  allowedHoursEnd   String?
+  forbiddenHours    Json?
+
+  setupTypes             String[]
+  entryConditions        String?  @db.Text
+  invalidationConditions String?  @db.Text
+  stopLogic              String?  @db.Text
+  targetLogic            String?  @db.Text
+  noTradeConditions      String?  @db.Text
+
+  minimumRR       Float?
+  maxTradesPerDay Int?
+  maxDailyLoss    Float?
+  maxDailyLossPct Float?
+
+  // { noRevengeTrades, minLossesBeforePause, noSizeIncreaseAfterLoss, noTradeWithoutStop }
+  riskRules Json?
+
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exampleImages StrategyExampleImage[]
+  trades        Trade[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+model StrategyExampleImage {
+  id         String   @id @default(cuid())
+  strategyId String
+  url        String
+  label      String?
+  isValid    Boolean
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@index([strategyId])
+}
+
+// ---------------------------------------------------------------------------
+// SETUP CLUSTER
+// Machine-inferred grouping of similar trades for classification suggestions.
+// ---------------------------------------------------------------------------
+
+model SetupCluster {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  keywords    String[] // words extracted from user explanations
+  tradeIds    String[] // IDs of trades that belong to this cluster
+  tradeCount  Int      @default(0)
+  winRate     Float?
+  avgR        Float?
+  suggestedSetupType String? // suggestion surfaced to the user
+  userConfirmed      Boolean @default(false) // user accepted the suggestion
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// IMPORT BATCH
+// ---------------------------------------------------------------------------
+
+model ImportBatch {
+  id            String       @id @default(cuid())
+  userId        String
+  method        ImportMethod
+  status        ImportStatus @default(PENDING)
+  fileName      String?
+  totalRows     Int          @default(0)
+  validRows     Int          @default(0)
+  invalidRows   Int          @default(0)
+  importedCount Int          @default(0)
+  errorSummary  Json?
+  columnMapping Json?
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades           Trade[]
+  postImportReview PostImportReview?
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+// ---------------------------------------------------------------------------
+// POST-IMPORT REVIEW SESSION
+// Guides the user through reviewing a sample of imported trades to improve
+// setup classification and adherence detection.
+// ---------------------------------------------------------------------------
+
+model PostImportReview {
+  id            String                 @id @default(cuid())
+  userId        String
+  importBatchId String                 @unique
+  status        PostImportReviewStatus @default(PENDING)
+
+  totalTrades    Int @default(0)
+  sampleSize     Int @default(0) // trades selected for review
+  reviewedCount  Int @default(0)
+
+  // IDs of trades selected for review
+  sampleTradeIds String[]
+
+  // Clusters built from reviewed trades
+  clustersGenerated Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  importBatch ImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// TRADE
+// ---------------------------------------------------------------------------
+
+model Trade {
+  id            String   @id @default(cuid())
+  userId        String
+  strategyId    String?
+  importBatchId String?
+
+  symbol      String
+  market      Market
+  side        TradeSide
+  entryAt     DateTime
+  exitAt      DateTime?
+  entryPrice  Float
+  exitPrice   Float?
+  stopPrice   Float?
+  targetPrice Float?
+  size        Float
+  fees        Float?    @default(0)
+  pnlAmount   Float?
+  pnlR        Float?
+
+  session   String?
+  setupType String?
+  isOpen    Boolean @default(false)
+
+  // ---------- Adherence & review ----------
+  adherence      AdherenceStatus @default(UNREVIEWED)
+  adherenceNotes String?         @db.Text
+  wasReviewed    Boolean         @default(false)
+
+  // ---------- Guided questionnaire fields ----------
+  // "What did you see?" – market conditions / chart observation
+  whatDidYouSee   String? @db.Text
+  // "What was the trigger?" – specific signal that prompted entry
+  setupTrigger    String? @db.Text
+  // "Why was the stop placed there?"
+  stopRationale   String? @db.Text
+  // "Why was the target placed there?"
+  targetRationale String? @db.Text
+  // "Was this planned before entry?" (true = yes, false = no, null = unanswered)
+  wasPlanned      Boolean?
+  // "What emotion did you feel before entry?"
+  emotionBefore   EmotionTag?
+  // "What emotion did you feel after exit?"
+  emotionAfter    EmotionTag?
+  // "Would you take this trade again?"
+  wouldTakeAgain  Boolean?
+  // General "why taken" and reflection
+  whyTaken      String? @db.Text
+  mistakeNotes  String? @db.Text
+  lessonLearned String? @db.Text
+
+  // ---------- Risk violations ----------
+  riskViolations String[]
+
+  // ---------- AI analysis ----------
+  aiAdherence           AdherenceStatus?
+  aiConfidence          Float?
+  aiReasoning           String?  @db.Text
+  aiSetupClassification String?
+  // Matched and broken rules from the adherence engine
+  aiMatchedRules  String[]
+  aiBrokenRules   String[]
+  aiCoachingNote  String?  @db.Text
+  aiAnalyzedAt    DateTime?
+
+  // Setup cluster this trade was assigned to
+  setupClusterId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategy    Strategy?        @relation(fields: [strategyId], references: [id])
+  importBatch ImportBatch?     @relation(fields: [importBatchId], references: [id])
+  screenshots TradeScreenshot[]
+  tradeTags   TradeTag[]
+
+  @@index([userId])
+  @@index([userId, entryAt])
+  @@index([userId, symbol])
+  @@index([userId, adherence])
+  @@index([userId, setupType])
+  @@index([userId, setupClusterId])
+  @@index([strategyId])
+  @@index([importBatchId])
+}
+
+// ---------------------------------------------------------------------------
+// TRADE SCREENSHOT
+// ---------------------------------------------------------------------------
+
+model TradeScreenshot {
+  id             String         @id @default(cuid())
+  tradeId        String
+  url            String
+  screenshotType ScreenshotType @default(OTHER)
+  label          String?
+  notes          String?
+  sortOrder      Int            @default(0)
+  createdAt      DateTime       @default(now())
+
+  trade Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  @@index([tradeId])
+  @@index([tradeId, screenshotType])
+}
+
+// ---------------------------------------------------------------------------
+// TAGS
+// ---------------------------------------------------------------------------
+
+model Tag {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String?  @default("#6366f1")
+  createdAt DateTime @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tradeTags TradeTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model TradeTag {
+  tradeId String
+  tagId   String
+
+  trade Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([tradeId, tagId])
+}
+
+// ---------------------------------------------------------------------------
+// DAILY REVIEW
+// ---------------------------------------------------------------------------
+
+model DailyReview {
+  id             String   @id @default(cuid())
+  userId         String
+  date           DateTime @db.Date
+  tradeCount     Int      @default(0)
+  adherentCount  Int      @default(0)
+  violationCount Int      @default(0)
+  pnlAmount      Float?
+  pnlR           Float?
+  winCount       Int      @default(0)
+  lossCount      Int      @default(0)
+  breakEvenCount Int      @default(0)
+
+  topMistakes    String[]
+  emotionalState String?
+  marketContext  String?  @db.Text
+  userNotes      String?  @db.Text
+  tomorrowPlan   String?  @db.Text
+
+  aiSummary                String?  @db.Text
+  aiImprovementSuggestions String?  @db.Text
+  aiGeneratedAt            DateTime?
+
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([userId, date])
+}
+
+// ---------------------------------------------------------------------------
+// INSIGHT SNAPSHOT
+// ---------------------------------------------------------------------------
+
+model InsightSnapshot {
+  id        String      @id @default(cuid())
+  userId    String
+  type      InsightType
+  period    String?
+  title     String
+  body      String      @db.Text
+  metadata  Json?
+  isRead    Boolean     @default(false)
+  createdAt DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([userId, isRead])
+}
+
+// ---------------------------------------------------------------------------
+// BROKER INTEGRATION PROVIDER RECORD
+// Stores configuration for a connected broker / data source.
+// The actual secrets are never stored here – they live in env vars or a
+// dedicated secrets manager.
+// ---------------------------------------------------------------------------
+
+model BrokerConnection {
+  id           String   @id @default(cuid())
+  userId       String
+  providerSlug String   // e.g. "tradovate", "ninjatrader", "interactive-brokers"
+  displayName  String
+  accountId    String?  // external account identifier
+  isActive     Boolean  @default(true)
+  lastSyncAt   DateTime?
+  metadata     Json?    // non-sensitive configuration
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, providerSlug])
+  @@index([userId])
+}
+
