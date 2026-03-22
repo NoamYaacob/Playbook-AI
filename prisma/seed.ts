@@ -13,10 +13,13 @@
  * Run: npm run db:seed
  */
 
+import "dotenv/config";
 import { PrismaClient, Market, TradeSide, AdherenceStatus, EmotionTag, ImportMethod, ImportStatus, InsightType, ScreenshotType, PostImportReviewStatus, GoalType, AccountType } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcryptjs from "bcryptjs";
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
