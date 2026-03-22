@@ -790,7 +790,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <Card className="bg-slate-800/60 border-slate-700/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
-              AI Behavior Patterns
+              Behavioral Insights
             </CardTitle>
           </CardHeader>
           <CardContent>

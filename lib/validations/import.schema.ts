@@ -132,9 +132,7 @@ export const ImportTradeRowSchema = z.object({
     .transform((v) => v.toUpperCase())
     .pipe(
       z.enum(marketValues, {
-        errorMap: () => ({
-          message: `Market must be one of: ${marketValues.join(", ")}`,
-        }),
+        error: `Market must be one of: ${marketValues.join(", ")}`,
       }),
     ),
 
@@ -144,9 +142,7 @@ export const ImportTradeRowSchema = z.object({
     .transform((v) => v.toUpperCase())
     .pipe(
       z.enum(tradeSideValues, {
-        errorMap: () => ({
-          message: `Side must be one of: ${tradeSideValues.join(", ")}`,
-        }),
+        error: `Side must be one of: ${tradeSideValues.join(", ")}`,
       }),
     ),
 
@@ -195,7 +191,7 @@ export const ImportTradeRowSchema = z.object({
     .string()
     .trim()
     .transform((v) => v.toUpperCase())
-    .pipe(z.enum(adherenceValues).optional())
+    .pipe(z.enum(adherenceValues))
     .optional(),
 
   adherenceNotes: z.string().trim().max(2000).optional(),
@@ -211,14 +207,14 @@ export const ImportTradeRowSchema = z.object({
     .string()
     .trim()
     .transform((v) => v.toUpperCase())
-    .pipe(z.enum(emotionTagValues).optional())
+    .pipe(z.enum(emotionTagValues))
     .optional(),
 
   emotionAfter: z
     .string()
     .trim()
     .transform((v) => v.toUpperCase())
-    .pipe(z.enum(emotionTagValues).optional())
+    .pipe(z.enum(emotionTagValues))
     .optional(),
 
   strategyId: z.string().trim().optional(),

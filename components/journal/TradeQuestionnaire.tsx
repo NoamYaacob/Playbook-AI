@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CheckCircle2, ChevronDown, Loader2, Save } from "lucide-react";
@@ -204,7 +204,7 @@ export function TradeQuestionnaire({ trade, onSave, isSaving }: Props) {
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as Resolver<FormValues>,
     defaultValues: {
       whatDidYouSee: trade.whatDidYouSee ?? "",
       setupTrigger: trade.setupTrigger ?? "",

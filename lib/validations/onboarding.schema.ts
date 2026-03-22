@@ -59,7 +59,7 @@ export const OnboardingSchema = z.object({
 
   /** Personal account or prop-firm account */
   accountType: z.enum(accountTypeValues, {
-    errorMap: () => ({ message: "Select an account type" }),
+    error: "Select an account type",
   }),
 
   /** At least one goal must be selected */

@@ -6,7 +6,7 @@
 
 import { db } from "@/lib/db";
 import { ai } from "@/lib/ai";
-import { ImportBatch, ImportMethod, ImportStatus } from "@prisma/client";
+import { ImportBatch, ImportMethod, ImportStatus, Prisma } from "@prisma/client";
 import { TradeFormData, TradeSchema } from "@/lib/validations/trade.schema";
 import type { PostImportReviewRow, SetupClusterRow } from "@/types";
 
@@ -134,7 +134,7 @@ export async function importTrades(
     const parsed = TradeSchema.safeParse(row);
 
     if (!parsed.success) {
-      const msg = parsed.error.errors[0]?.message ?? "Invalid row";
+      const msg = parsed.error.issues[0]?.message ?? "Invalid row";
       errors.push(`Row ${i + 1}: ${msg}`);
       continue;
     }
@@ -178,7 +178,7 @@ export async function importTrades(
 
   if (validTradeData.length > 0) {
     const result = await db.trade.createMany({
-      data: validTradeData as Parameters<typeof db.trade.createMany>[0]["data"],
+      data: validTradeData as Prisma.TradeCreateManyInput[],
       skipDuplicates: false,
     });
     imported = result.count;

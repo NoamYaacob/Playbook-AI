@@ -181,8 +181,75 @@ async function main() {
   // ── trades ────────────────────────────────────────────────────────────────
   const symbols = ["ES", "NQ", "SPY", "QQQ", "AAPL", "TSLA", "NVDA"];
   const setupTypes = ["ORB Long", "ORB Short", "ORB Retest", "VWAP Reclaim", "Breakout", "Fade"];
-  const adherenceValues: AdherenceStatus[] = [AdherenceStatus.YES, AdherenceStatus.YES, AdherenceStatus.YES, AdherenceStatus.NO, AdherenceStatus.PARTIAL];
+  const adherencePool: AdherenceStatus[] = [AdherenceStatus.YES, AdherenceStatus.YES, AdherenceStatus.YES, AdherenceStatus.NO, AdherenceStatus.PARTIAL];
   const emotions: EmotionTag[] = [EmotionTag.CONFIDENT, EmotionTag.NEUTRAL, EmotionTag.DISCIPLINED, EmotionTag.ANXIOUS, EmotionTag.FOMO, EmotionTag.PATIENT];
+
+  // Rich questionnaire answer pools
+  const whatDidYouSeePool = [
+    "ES was forming a clear ORB pattern. Price spent the first 30 minutes in a tight range near the prior day close with above-average volume. Clean structure with higher lows forming.",
+    "NQ gapped up at open and was reclaiming VWAP after a pullback. Buyers stepped in at the 15-min VWAP level. Market structure was bullish.",
+    "SPY had a failed breakdown below the prior day low. Shorts got trapped when price reversed sharply above the level. Volume spike on the reversal confirmed the move.",
+    "Price was making lower highs and lower lows on the 5-min chart. VWAP acting as resistance. Market context was clearly bearish.",
+    "ES broke out of a multi-day range on higher volume. First pullback to the breakout level held perfectly. Clean textbook setup.",
+    "I saw momentum but didn't see a clear setup. Chased the move after it was already 60% extended from the ideal entry.",
+    "Gap fill opportunity: ES opened with a gap and historical gap fill rate is high. Level was clean on the daily.",
+    "Watched NQ reject the premarket high 3 times before entering on the 4th test. Supply was clearly there.",
+  ];
+
+  const setupTriggerPool = [
+    "First 5-min candle close above the ORB high with volume 2× the 20-period average. Stop placed below the opening range low.",
+    "VWAP reclaim confirmed by two consecutive 3-min candle closes above VWAP. Momentum indicators aligned.",
+    "Price reclaimed the failed breakdown level. Trigger was the 3-min candle close back above the key support.",
+    "Moving average crossover on the 5-min with price below VWAP. Confirmed with price action rejection at resistance.",
+    "Break and close of the prior day high on the 15-min chart. Volume expansion confirmed the breakout was real.",
+    "No clear trigger — entered based on gut feeling after seeing price move quickly. This was not a valid setup.",
+    "Gap fill target was the 4-hour gap. Entered on the 3-min pullback after the initial gap fill move started.",
+    "Triple top rejection pattern with a momentum divergence on the RSI. Entered on the break of the pattern's neckline.",
+  ];
+
+  const stopRationalePool = [
+    "Stop below the opening range low, which is the technical invalidation level for the ORB setup. If price takes that level, the premise is wrong.",
+    "Stop above the VWAP reclaim candle's high — if price goes back above there, the reclaim failed.",
+    "Stop above the breakdown level. If price gets back above it, shorts are no longer trapped.",
+    "Stop above VWAP. If price reclaims VWAP, the bearish thesis is invalidated.",
+    "Stop below the breakout level. If price drops back into the range, the breakout was false.",
+    "No stop was set. I planned to 'watch it' — this was a risk management violation.",
+    "Stop above the gap fill high. If price goes above that level before filling, setup is invalidated.",
+    "Stop above the triple top rejection high. Clean level that invalidates the short thesis.",
+  ];
+
+  const targetRationalePool = [
+    "2R minimum target per my strategy rules. Secondary target at the measured move projection (1.5× the opening range height).",
+    "VWAP + 1 standard deviation as the first target (measured extension from the reclaim). 2R minimum maintained.",
+    "Prior day high as the first target — natural resistance. Would trail stop to breakeven at 1R.",
+    "VWAP as the target — standard mean reversion target when trading a faded extended move.",
+    "Prior weekly high as the target — clear resistance level with historical significance.",
+    "Target was the round number below. Rough estimate, not based on measured move. No clear plan.",
+    "Full gap fill as target — clean measured move with historical context.",
+    "Prior swing low as target — natural support on the daily chart.",
+  ];
+
+  const mistakeNotesPool = [
+    null,
+    null,
+    null,
+    "Moved stop too early. Got scared after a minor pullback and tightened the stop, which got hit before the target was reached.",
+    "Chased the entry. Missed the ideal entry and entered late, which reduced my R:R and increased risk unnecessarily.",
+    "No stop was set. I rationalized watching the trade but this violates the most important rule in my playbook.",
+    "Took the trade without confirming volume. The move looked good but volume wasn't there to support it.",
+    "Took profit too early out of fear. The trade hit 1R and I closed it, but it went to 3R without me.",
+  ];
+
+  const lessonLearnedPool = [
+    null,
+    null,
+    null,
+    "Never move a stop based on emotion. Only move stops based on structure (to breakeven at 1R, or trail at key levels). Fear-based stop adjustments almost always result in getting stopped out before the target.",
+    "Wait for the setup to come to you. If you miss the ideal entry, let the trade go. A late entry with poor R:R is worse than no trade.",
+    "A trade without a stop is not a trade — it's gambling. This is non-negotiable. Set the stop before entering, always.",
+    "Volume confirms the move. If the volume isn't there, the setup isn't complete regardless of how good the chart looks.",
+    "Trust the process. Taking 1R when the setup targets 3R is inconsistent. Stick to the defined exit criteria.",
+  ];
 
   const tradeIds: string[] = [];
 
@@ -199,8 +266,56 @@ async function main() {
     const exitPrice = side === TradeSide.LONG
       ? entryPrice + (pnlAmount / rand(1, 5, 0))
       : entryPrice - (pnlAmount / rand(1, 5, 0));
-    const adherence = pick(adherenceValues);
+    const adherence = pick(adherencePool);
     const strategyId = i < 50 ? activeStrategy.id : archivedStrategy.id;
+
+    // Determine emotion based on adherence and outcome
+    const isWin = pnlAmount >= 0;
+    const isRevenge = adherence === AdherenceStatus.NO && i % 7 === 0;
+    const isFomo = adherence === AdherenceStatus.NO && i % 5 === 0;
+    const emotionBefore = isRevenge
+      ? EmotionTag.REVENGE
+      : isFomo
+        ? EmotionTag.FOMO
+        : adherence === AdherenceStatus.YES
+          ? pick([EmotionTag.CONFIDENT, EmotionTag.DISCIPLINED, EmotionTag.PATIENT])
+          : pick(emotions);
+    const emotionAfter = isWin
+      ? pick([EmotionTag.CONFIDENT, EmotionTag.NEUTRAL])
+      : pick([EmotionTag.ANXIOUS, EmotionTag.NEUTRAL, EmotionTag.FEARFUL]);
+
+    // Risk violations for off-plan trades
+    const riskViolations: string[] = [];
+    if (adherence === AdherenceStatus.NO) {
+      if (isRevenge) riskViolations.push("REVENGE_TRADE");
+      else if (isFomo) riskViolations.push("OUTSIDE_ALLOWED_HOURS");
+      else riskViolations.push(pick(["NO_STOP_LOSS", "UNAPPROVED_SETUP", "BELOW_MINIMUM_RR"]));
+    }
+
+    // AI analysis fields
+    const hasStop = riskViolations.includes("NO_STOP_LOSS") ? false : true;
+    const rrMet = rMultiple >= 2.0;
+    const aiMatchedRules: string[] = [];
+    const aiBrokenRules: string[] = [];
+
+    if (adherence !== AdherenceStatus.UNREVIEWED) {
+      if (hasStop) aiMatchedRules.push("Stop-loss placed before entry");
+      else aiBrokenRules.push("No stop-loss — violates mandatory stop rule");
+
+      if (rrMet) aiMatchedRules.push("R:R ratio meets 2.0 minimum");
+      else if (rMultiple < 2.0 && rMultiple > 0) aiBrokenRules.push("R:R below 2.0 minimum threshold");
+
+      if (adherence === AdherenceStatus.YES) {
+        aiMatchedRules.push("Setup type is in approved list");
+        aiMatchedRules.push("Entry during allowed session (NY Open 9:30–11:30)");
+        if (emotionBefore !== EmotionTag.REVENGE) aiMatchedRules.push("No revenge emotion detected");
+      } else {
+        if (isRevenge) aiBrokenRules.push("Revenge trade detected — strategy prohibits trading under REVENGE emotion");
+        if (isFomo) aiBrokenRules.push("Entry outside allowed hours window");
+      }
+    }
+
+    const questIdx = i % whatDidYouSeePool.length;
 
     const trade = await prisma.trade.create({
       data: {
@@ -214,7 +329,7 @@ async function main() {
         exitAt,
         entryPrice,
         exitPrice,
-        stopPrice,
+        stopPrice: hasStop ? stopPrice : null,
         targetPrice: side === TradeSide.LONG ? entryPrice + stopOffset * 2 : entryPrice - stopOffset * 2,
         size: pick([1, 2, 5, 10]),
         fees: rand(1, 8),
@@ -225,27 +340,52 @@ async function main() {
         isOpen: false,
         adherence,
         wasReviewed: adherence !== AdherenceStatus.UNREVIEWED,
-        emotionBefore: pick(emotions),
-        emotionAfter: pnlAmount >= 0 ? EmotionTag.CONFIDENT : pick([EmotionTag.ANXIOUS, EmotionTag.NEUTRAL]),
         wasPlanned: adherence === AdherenceStatus.YES,
-        wouldTakeAgain: pnlAmount >= 0 && adherence === AdherenceStatus.YES,
-        whyTaken: "Price broke the ORB level with strong momentum and high volume confirmation.",
-        riskViolations: adherence === AdherenceStatus.NO
-          ? [pick(["NO_STOP_LOSS", "OFF_HOURS_ENTRY", "REVENGE_TRADE", "EXCEEDED_MAX_TRADES"])]
-          : [],
+        wouldTakeAgain: isWin && adherence === AdherenceStatus.YES,
+        emotionBefore,
+        emotionAfter,
+        // Rich questionnaire answers
+        whatDidYouSee: adherence !== AdherenceStatus.UNREVIEWED ? whatDidYouSeePool[questIdx] : null,
+        setupTrigger: adherence !== AdherenceStatus.UNREVIEWED ? setupTriggerPool[questIdx] : null,
+        stopRationale: adherence !== AdherenceStatus.UNREVIEWED ? stopRationalePool[questIdx] : null,
+        targetRationale: adherence !== AdherenceStatus.UNREVIEWED ? targetRationalePool[questIdx] : null,
+        whyTaken: adherence !== AdherenceStatus.UNREVIEWED
+          ? (adherence === AdherenceStatus.YES
+              ? "This setup checked all boxes in my playbook. Clear structure, volume confirmation, valid session, and defined risk."
+              : "Saw price moving and felt compelled to act. Did not wait for full confirmation.")
+          : null,
+        mistakeNotes: mistakeNotesPool[questIdx],
+        lessonLearned: lessonLearnedPool[questIdx],
+        adherenceNotes: adherence === AdherenceStatus.PARTIAL
+          ? "Entry was valid but I sized up slightly above my normal position size. Need to keep size consistent."
+          : null,
+        riskViolations,
+        // AI analysis
         aiAdherence: adherence,
-        aiConfidence: rand(0.6, 0.98),
+        aiConfidence: rand(0.65, 0.95),
+        aiMatchedRules,
+        aiBrokenRules,
         aiReasoning: adherence === AdherenceStatus.YES
-          ? "Trade matches all strategy criteria: correct session, valid setup type, stop-loss placed correctly, R:R above minimum threshold."
-          : "Trade deviated from strategy: entry outside allowed hours or setup type not in playbook.",
-        aiAnalyzedAt: new Date(),
+          ? "Trade aligns with all defined strategy criteria. Entry confirmed during allowed session window, stop-loss in place, and R:R above the 2.0 minimum threshold."
+          : adherence === AdherenceStatus.PARTIAL
+            ? "Trade partially followed strategy rules. Core setup was valid but one or more secondary criteria were not met."
+            : "Trade deviated from strategy. Key rules were broken that increase risk without a clear edge basis.",
+        aiCoachingNote: adherence !== AdherenceStatus.UNREVIEWED
+          ? (adherence === AdherenceStatus.YES
+              ? "Solid execution. You waited for confirmation and respected your rules. Keep this consistency."
+              : adherence === AdherenceStatus.PARTIAL
+                ? "Good setup awareness but execution had a gap. Review which rule was missed and whether a checklist would help."
+                : "This trade fell outside your defined edge. Reflect on what triggered the deviation — was it boredom, FOMO, or something else?")
+          : null,
+        aiSetupClassification: pick(["Opening Range Breakout", "VWAP Reclaim", "Failed Breakdown", "Momentum Continuation", null, null]),
+        aiAnalyzedAt: adherence !== AdherenceStatus.UNREVIEWED ? new Date() : null,
       },
     });
 
     tradeIds.push(trade.id);
   }
 
-  console.log(`  ✓ Trades: 60 created`);
+  console.log(`  ✓ Trades: 60 created with rich questionnaire data`);
 
   // ── trade tags ────────────────────────────────────────────────────────────
   const tagAssignments = [

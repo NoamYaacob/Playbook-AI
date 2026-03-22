@@ -143,7 +143,7 @@ export function PnlBySetup({
               dataKey={metric}
               position="right"
               style={{ fill: "#94a3b8", fontSize: 11 }}
-              formatter={(v: number) => formatMetricValue(v, metric)}
+              formatter={(v) => formatMetricValue(Number(v), metric)}
             />
           </Bar>
         </BarChart>

@@ -17,5 +17,5 @@ export default async function TradeDetailPage({ params }: PageProps) {
 
   if (!trade) notFound();
 
-  return <TradeDetailPanel trade={trade} />;
+  return <TradeDetailPanel trade={trade} userId={session.user.id} />;
 }

@@ -51,11 +51,11 @@ export const TradeSchema = z
       .toUpperCase(),
 
     market: z.enum(marketValues, {
-      errorMap: () => ({ message: "Select a market" }),
+      error: "Select a market",
     }),
 
     side: z.enum(tradeSideValues, {
-      errorMap: () => ({ message: "Select Long or Short" }),
+      error: "Select Long or Short",
     }),
 
     // ISO datetime strings; accept Date or string and coerce
@@ -70,7 +70,7 @@ export const TradeSchema = z
       .nullable(),
 
     entryPrice: z
-      .number({ required_error: "Entry price is required" })
+      .number("Entry price is required")
       .positive("Entry price must be positive"),
 
     exitPrice: z.number().positive("Exit price must be positive").optional().nullable(),
@@ -80,7 +80,7 @@ export const TradeSchema = z
     targetPrice: z.number().positive("Target price must be positive").optional().nullable(),
 
     size: z
-      .number({ required_error: "Size is required" })
+      .number("Size is required")
       .positive("Size must be positive"),
 
     fees: z.number().min(0).default(0).optional(),
@@ -101,12 +101,17 @@ export const TradeSchema = z
     wasReviewed: z.boolean().default(false),
 
     // ── Trade journal notes ────────────────────────────────────────────────
+    whatDidYouSee: z.string().max(2000).trim().optional().nullable(),
     whyTaken: z.string().max(2000).trim().optional().nullable(),
     setupTrigger: z.string().max(2000).trim().optional().nullable(),
     stopRationale: z.string().max(2000).trim().optional().nullable(),
     targetRationale: z.string().max(2000).trim().optional().nullable(),
     mistakeNotes: z.string().max(2000).trim().optional().nullable(),
     lessonLearned: z.string().max(2000).trim().optional().nullable(),
+
+    // ── Planned & review ──────────────────────────────────────────────────
+    wasPlanned: z.boolean().optional().nullable(),
+    wouldTakeAgain: z.boolean().optional().nullable(),
 
     // ── Emotions ───────────────────────────────────────────────────────────
     emotionBefore: z.enum(emotionTagValues).optional().nullable(),

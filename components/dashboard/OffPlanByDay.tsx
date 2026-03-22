@@ -131,7 +131,7 @@ export function OffPlanByDay({ data, height = 280 }: OffPlanByDayProps) {
             dataKey="totalCount"
             position="top"
             style={{ fill: "#64748b", fontSize: 10 }}
-            formatter={(v: number) => (v > 0 ? `${v}` : "")}
+            formatter={(v) => (Number(v) > 0 ? `${v}` : "")}
           />
         </Bar>
       </BarChart>

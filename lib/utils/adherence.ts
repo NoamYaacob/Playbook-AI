@@ -187,7 +187,7 @@ export function checkAdherence(
   ];
 
   const hasCritical = violations.some((v) =>
-    criticalViolations.includes(v as RiskViolationCode),
+    (criticalViolations as string[]).includes(v as string),
   );
 
   if (violations.length === 0) {

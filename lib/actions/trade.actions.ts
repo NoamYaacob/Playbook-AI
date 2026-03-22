@@ -6,7 +6,7 @@
 
 import { db } from "@/lib/db";
 import { TradeFormData, TradeSchema } from "@/lib/validations/trade.schema";
-import { Trade } from "@prisma/client";
+import { Trade, Prisma } from "@prisma/client";
 import type {
   TradeFilters,
   TradeRow,
@@ -88,7 +88,7 @@ export async function createTrade(
 
   const parsed = TradeSchema.safeParse(data);
   if (!parsed.success) {
-    throw new Error(parsed.error.errors[0]?.message ?? "Invalid trade data");
+    throw new Error(parsed.error.issues[0]?.message ?? "Invalid trade data");
   }
 
   const {
@@ -255,7 +255,7 @@ export async function getTrades(
   const skip = (page - 1) * pageSize;
 
   const trades = await db.trade.findMany({
-    where: where as Parameters<typeof db.trade.findMany>[0]["where"],
+    where: where as Prisma.TradeWhereInput,
     orderBy: sortBy
       ? { [sortBy]: sortDir }
       : { entryAt: "desc" },
@@ -492,7 +492,7 @@ export async function getAdherenceTimeSeries(
   }
 
   const trades = await db.trade.findMany({
-    where: where as Parameters<typeof db.trade.findMany>[0]["where"],
+    where: where as Prisma.TradeWhereInput,
     orderBy: { entryAt: "asc" },
   });
 

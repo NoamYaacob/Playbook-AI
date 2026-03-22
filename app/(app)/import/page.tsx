@@ -7,6 +7,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getImportBatches, getPostImportReview } from "@/lib/actions/import.actions";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { DisclaimerBanner } from "@/components/shared/DisclaimerBanner";
 import { CsvUploader } from "@/components/import/CsvUploader";
 import { ManualTradeFormTrigger } from "@/components/import/ManualTradeFormTrigger";
 import { Badge } from "@/components/ui/badge";
@@ -348,6 +349,11 @@ export default async function ImportPage() {
           </div>
         </section>
       )}
+
+      <DisclaimerBanner
+        variant="subtle"
+        message="Setup clusters and classification suggestions are generated from your own trade data and descriptions. They are pattern-recognition aids for self-reflection only — not signals, advice, or recommendations of any kind."
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { getStrategy } from "@/lib/actions/strategy.actions";
 import { db } from "@/lib/db";
 import { StrategyDetail } from "@/components/playbook/StrategyDetail";
 import { Button } from "@/components/ui/button";
+import { DisclaimerBanner } from "@/components/shared/DisclaimerBanner";
 
 interface Props {
   params: Promise<{ strategyId: string }>;
@@ -83,6 +84,13 @@ export default async function StrategyDetailPage({ params }: Props) {
           tradeCount={totalTrades}
           adherenceScore={adherenceScore}
         />
+
+        <div className="mt-6">
+          <DisclaimerBanner
+            variant="subtle"
+            message="This playbook is your personal trading strategy document. Adherence scores and rule checks are based solely on your own defined criteria. Nothing in this platform constitutes financial advice or investment recommendations."
+          />
+        </div>
       </div>
     </div>
   );

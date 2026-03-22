@@ -186,7 +186,7 @@ export function validateRow(
     return { valid: true, errors: [] };
   }
 
-  const errors = result.error.errors.map((e) => {
+  const errors = result.error.issues.map((e) => {
     const path = e.path.length > 0 ? `${e.path.join(".")}: ` : "";
     return `${path}${e.message}`;
   });

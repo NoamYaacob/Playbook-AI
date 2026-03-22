@@ -148,10 +148,13 @@ function toTradeRow(trade: TradeWithRelations): TradeRow {
   };
 }
 
+type ScreenshotItem = TradeWithRelations["screenshots"][number];
+type TradeTagItem = TradeWithRelations["tradeTags"][number];
+
 function toScreenshotRows(
   screenshots: TradeWithRelations["screenshots"],
 ): TradeScreenshotRow[] {
-  return screenshots.map((ss) => ({
+  return screenshots.map((ss: ScreenshotItem) => ({
     id: ss.id,
     tradeId: ss.tradeId,
     url: ss.url,
@@ -512,7 +515,7 @@ export function TradeDetailPanel({ trade, userId }: TradeDetailPanelProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {trade.tradeTags.map(({ tag }) => (
+                    {trade.tradeTags.map(({ tag }: TradeTagItem) => (
                       <span
                         key={tag.id}
                         className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
